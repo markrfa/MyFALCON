@@ -52,14 +52,10 @@ if __name__ == "__main__":
     print(f"[INFO] After exclusion: {len(train_idx)} train samples, {len(val_idx)} validation samples, {len(test_idx)} test samples.")
 
     print("[INFO] Creating + fitting scaler on train set...")
-    # Load scaler
-    scaler_path = f"./{root_dir}/performance_scaler_gnn.pkl"
-    scaler = joblib.load(scaler_path)
-    train_dataset = CircuitGraphWithNormalizedY(full_dataset, train_idx, scaler=scaler)
-
-    # scaler = train_dataset.scaler
-    # joblib.dump(scaler, os.path.join(root_dir, "performance_scaler_gnn.pkl"))
-    # print("[INFO] Saved scaler to performance_scaler_gnn.pkl")
+    train_dataset = CircuitGraphWithNormalizedY(full_dataset, train_idx)
+    scaler = train_dataset.scaler
+    joblib.dump(scaler, os.path.join(root_dir, "performance_scaler_gnn.pkl"))
+    print("[INFO] Saved scaler to performance_scaler_gnn.pkl")
 
     print("[INFO] Creating validation sets...")
     val_dataset = CircuitGraphWithNormalizedY(full_dataset, val_idx, scaler=scaler)
