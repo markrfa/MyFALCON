@@ -5,6 +5,9 @@
   <a href="https://github.com/AsalMehradfar/FALCON/stargazers"><img src="https://img.shields.io/github/stars/AsalMehradfar/FALCON?style=social" alt="GitHub Stars"/></a>
 </p>
 
+> 📣 **Announcements**  
+> FALCON paper has been published at [The Thirty-ninth Conference on Neural Information Processing Systems (NeurIPS) 2025](https://neurips.cc/virtual/2025/loc/san-diego/poster/118890)! 🎉  
+
 <p align="justify">
 <strong>FALCON</strong> (Fully Automated Layout-Constrained analOg circuit desigN) is a unified machine learning framework for end-to-end analog and RF circuit synthesis. Given a target performance specification, FALCON selects a suitable circuit topology and infers layout-constrained parameters through a modular, gradient-based optimization pipeline powered by graph neural networks (GNNs).
 </p>
@@ -124,11 +127,11 @@ python evaluation/gnn_backward_eval.py
 If you use FALCON in a research paper, please cite our [paper](https://arxiv.org/abs/2505.21923):
 
 ```bibtex
-@article{Mehradfar2025FALCON,
-      title={FALCON: An ML Framework for Fully Automated Layout-Constrained Analog Circuit Design}, 
+@inproceedings{Mehradfar2025FALCON,
+      title={{{FALCON}: An {ML} Framework for Fully Automated Layout-Constrained Analog Circuit Design}},
       author={Asal Mehradfar and Xuzhe Zhao and Yilun Huang and Emir Ceyani and Yankai Yang and Shihao Han and Hamidreza Aghasi and Salman Avestimehr},
-      year={2025},
-      url={https://arxiv.org/abs/2505.21923}
+      booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems},
+      year={2025}
 }
 ```
 
