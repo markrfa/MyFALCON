@@ -12,7 +12,7 @@ from circuits.dataset_gen import make_ds
 
 def main(
         yaml_path='circuits/cktparam.yaml',
-        num_workers=4
+        num_workers=1
     ):
     ds_path = Path("circuits/dataset.jsonl")
     if not ds_path.exists():

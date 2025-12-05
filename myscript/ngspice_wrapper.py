@@ -9,13 +9,13 @@ import yaml
 import json
 import itertools
 from compute_performance import TwoStageClass
-import tempfile
+import tqdm
 debug = False
 
 
 class NgSpiceWrapper(object):
 
-    BASE_TMP_DIR = os.path.abspath("/home/ubuntu/FALCON/myscript/designs")
+    BASE_TMP_DIR = os.path.abspath("/home/ubuntu/FALCON/myscript/circuits")
 
     def __init__(self, num_process, top_index, yaml_path, path, root_dir=None):
         if root_dir == None:
@@ -25,18 +25,21 @@ class NgSpiceWrapper(object):
 
         with open(yaml_path, 'r') as f:
             self.yaml_data = yaml.load(f, Loader=yaml.FullLoader)
-        design_netlist = self.yaml_data['dsn_netlist'][top_index]
-        design_netlist = path+'/'+design_netlist
+        self.fpath = self.yaml_data['dsn_netlist'][top_index]
+        self.fpath = os.path.join(path, self.fpath)
+        print("topology index:", top_index)
+        print("self.fpath:", self.fpath)
         
-        _, dsg_netlist_fname = os.path.split(design_netlist)  # filename w/ extension
+        
+        _, dsg_netlist_fname = os.path.split(self.fpath)  # filename w/ extension
         self.base_design_name = os.path.splitext(dsg_netlist_fname)[0]  # filename w/o extension
         self.num_process = num_process
-        self.gen_dir = os.path.join(self.root_dir, "designs_" + self.base_design_name)
+        self.gen_dir = os.path.join(self.root_dir, self.base_design_name)
 
         os.makedirs(self.root_dir, exist_ok=True)
         os.makedirs(self.gen_dir, exist_ok=True)
 
-        with open(design_netlist, 'r') as raw_file:
+        with open(self.fpath, 'r') as raw_file:
             self.tmp_lines = raw_file.readlines()
         
         self.translator = TwoStageClass()
@@ -49,14 +52,10 @@ class NgSpiceWrapper(object):
         return fname
 
 
-    # TODO: modify the file 
+    # TODO: modify the file from circuits/circut_num
     # so that it takes the parameter variations from the yaml file
     # and apply them to create designs individually
-    def create_design(self, state, new_fname):
-        design_folder = tempfile.TemporaryDirectory(prefix=new_fname, dir=self.gen_dir)
-
-        fpath = os.path.join(design_folder, new_fname + '.cir')
-
+    def create_design(self, state):
         lines = copy.deepcopy(self.tmp_lines)
         for line_num, line in enumerate(lines):
             if '.param' in line:
@@ -67,9 +66,8 @@ class NgSpiceWrapper(object):
                         new_replacement = "%s=%s" % (key, str(value))
                         lines[line_num] = lines[line_num].replace(found.group(0), new_replacement)
 
-        with open(fpath, 'w') as f:
-            f.writelines(lines)
-        return design_folder, fpath
+        with open(self.fpath, 'w') as f:
+            f.write(''.join(lines))
 
 
     def simulate(self, fpath):
@@ -104,11 +102,10 @@ class NgSpiceWrapper(object):
             dsn_name = str(dsn_name)
         if verbose:
             print(dsn_name)
-        design_folder, fpath = self.create_design(state, dsn_name)
+        self.create_design(state)
         topology = self.base_design_name
-        info = self.simulate(fpath)
-        specs = self.translate_result(design_folder)
-        design_folder.cleanup()  # remove design folder
+        info = self.simulate(self.fpath)
+        specs = self.translate_result(self.gen_dir)
         return topology, state, specs, info
 
 
@@ -121,13 +118,14 @@ class NgSpiceWrapper(object):
         :param output_path:
         :return:
         """
-        result = self.translate_result(output_path)
+        result = self.translator.translate_result(output_path)
         return result
 
 
     # make states from cktparam.yaml
     # list of all possible combinations of parameters as specified in the yaml
     def make_states(self):
+        print("making states for", self.base_design_name)
         params = self.yaml_data["params"]
         param_ranges = params.values()
         param_names = list(params.keys())
@@ -145,6 +143,7 @@ class NgSpiceWrapper(object):
 
         # itertools.product() return the Cartesian product (all possible combinations) of the input list
         states = [dict(zip(param_names, combo)) for combo in itertools.product(*value_lists)]
+        print(self.base_design_name, "generation complete")
 
         return states
     
@@ -158,12 +157,19 @@ class NgSpiceWrapper(object):
             results = [(state: dict(param_kwds, param_value), specs: dict(spec_kwds, spec_value), info: int)]
         """
         states = self.make_states()
-        pool = ThreadPool(processes=self.num_process)
+        # pool = ThreadPool(processes=self.num_process)
         if design_names is None:
             design_names = [self.base_design_name] * len(states)
         arg_list = [(state, dsn_name, verbose) for (state, dsn_name)in zip(states, design_names)]
-        specs = pool.starmap(self.create_design_and_simulate, arg_list)
-        pool.close()
+        specs = []
+        total_iterations = len(arg_list)
+        pbar = tqdm(total=total_iterations, desc="Generating simulations...", unit="file")
+        for arg in arg_list:
+            specs.append(self.create_design_and_simulate(*arg))
+            pbar.update(1)  # increment progress
+        # specs = pool.starmap(self.create_design_and_simulate, arg_list)
+        # pool.close()
+        pbar.close()
 
         with open(output_file, 'w') as json_f:
             json.dump(specs, json_f)
