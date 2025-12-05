@@ -1,0 +1,32 @@
+database_dir: "FALCON/myscript/circuits"
+dsn_netlist: [
+  "circuits/281/281_gen_netlist.cir", 
+  "circuits/628/628_gen_netlist.cir",
+  "circuits/921/921_gen_netlist.cir",
+  "circuits/978/978_gen_netlist.cir",
+  "circuits/1781/1781_gen_netlist.cir"
+]
+num_process: 1
+
+# format: "component_name": [lower_bound, upper_bound, increment]
+params:
+  R:  !!python/tuple [1000, 100000, 1000] # 1 kΩ - 100 kΩ
+  L:  !!python/tuple [!!float 1e-9, !!float 1e-6, !!float 1e-8] # 1 nH - 1 μH
+  C:  !!python/tuple [!!float 1e-13, !!float 5e-12, !!float 1e-13] # 100 fF - 5 pF
+  w:  !!python/tuple [!!float 1e-6, !!float 5e-5, !!float 1e-6] # 1 μm - 50 μm
+  ll:  !!python/tuple [!!float 3.6e-7, !!float 9e-7, !!float 5e-8] # 360 nm - 900nm
+  mn: !!python/tuple [1, 20, 1] # multiplier: 1 - 20
+  mp: !!python/tuple [1, 20, 1] # multiplier: 1 - 20
+  vth:   !!python/tuple [!!float 0.3, !!float 0.8, !!float 0.05]  # 	0.3 V	- 0.8 V
+
+# Every specification output will be normalized in the order of (gain, ibias, pm, ugbw)
+# TODO: fix the normalizaton values
+normalize: !!python/tuple [350, 0.001, 60, 950000.0]
+ 
+# during training, at reset a specification will be chosen at random between [min,max,#]
+# format: "target parameter name": [lower_bound, upper_bound]
+target_specs:
+  gain_min: !!python/tuple [60, 100] #  Gain: 60dB- 100dB
+  ugbw_min: !!python/tuple [!!float 1.0e6, !!float 2.0e8] # UGBW: 1MHz - 200MHz
+  phm_min: !!python/tuple [!!float 45.0,!!float 70.0] # Phase Margin: 45° - 85° (sweet spot ~60°)
+  ibias_max: !!python/tuple [!!float 0.0001, !!float 0.01] # I_bias: 1μA - 100 μA

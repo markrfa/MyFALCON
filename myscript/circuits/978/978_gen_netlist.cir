@@ -1,0 +1,104 @@
+* ====================================================
+* Fixed Netlist: Differential-ish OTA with AC export
+* ====================================================
+* Models
+.include "../45nm_bulk.txt"
+
+* Parameters
+.param R=1000
+.param L=1e-09
+.param C=1e-13
+.param w=1e-06
+.param ll=3.6e-07
+.param mn=1
+.param mp=1
+.param vth=0.3
+.param ibias=30u
+.param cload=10p
+.param vcm=0.6
+
+* ----------------------------------------------------
+*  Core Components
+* ----------------------------------------------------
+M2 VOUT1 net13 VDD VDD pmos w=w l=ll m=mp
+M1 net12 net12 VDD VDD pmos w=w l=ll m=mp      ; diode-connected PMOS
+M0 net13 net12 VDD VDD pmos w=w l=ll m=mp      ; mirror from net12 to net13
+
+M6 VOUT1 VB1  VSS VSS nmos w=w l=ll m=mn       ; extra pull-down at VOUT1
+M5 net9  VB1  VSS VSS nmos w=w l=ll m=mn       ; tail transistor
+M4 net13 net2 net9 VSS nmos w=w l=ll m=mn      ; input 2
+M3 net12 net1 net9 VSS nmos w=w l=ll m=mn      ; input 1
+
+* ----------------------------------------------------
+*  Inputs (differential around vcm)
+* ----------------------------------------------------
+vin  in  0 dc 0 ac 1
+ein1 net1 cm in 0  0.5     ; +0.5 * vin
+ein2 net2 cm in 0 -0.5     ; -0.5 * vin
+vcm  cm  0 dc vcm
+
+* ----------------------------------------------------
+*  Supplies
+* ----------------------------------------------------
+vdd VDD 0 dc 1.2
+vss 0   VSS dc 0
+
+* ----------------------------------------------------
+*  Load
+* ----------------------------------------------------
+CL VOUT1 0 cload
+
+* ----------------------------------------------------
+*  Bias
+* ----------------------------------------------------
+* Tail current source: sink current from net9 to ground
+ibias_tail net9 0 dc ibias
+
+* Bias VB1 so M5 and M6 are on
+vvb1 VB1 0 0.8
+
+* VB2/VB3 unused in this topology -> removed to avoid confusion
+
+* ----------------------------------------------------
+*  Measurements (keep your .meas)
+* ----------------------------------------------------
+* We’ll run AC from .control instead of here, but keep the meas cards:
+.meas ac gain_min   FIND v(VOUT1) AT=1
+.meas ac ugbw_min   WHEN vm(VOUT1)=1 CROSS=1
+.meas ac phase_ugbw FIND vp(VOUT1) WHEN vm(VOUT1)=1 CROSS=1
+* phm_min = 180 + phase_ugbw
+
+* ----------------------------------------------------
+*  Control: OP + AC + CSV export + simple tests
+* ----------------------------------------------------
+.control
+    set wr_vecnames
+    set units=degrees
+    .option numdgt=7
+
+    * 1) DC operating point for sanity
+    op
+    echo "=== OP voltages ==="
+    print v(VOUT1) v(net12) v(net13) v(net9) v(VB1)
+    echo "=== OP of a few key devices ==="
+    show M3
+    show M4
+    show M5
+    show M2
+    wrdata dc.csv i(vdd)
+
+    * 2) AC sweep (log, 1 Hz .. 10 GHz)
+    ac dec 10 1 10G
+
+    echo "=== Sample AC values at VOUT1 ==="
+    print v(VOUT1) at=1k
+    print v(VOUT1) at=1Meg
+
+    * 3) Export AC results: freq, gain(dB), phase(deg)
+    * Make sure the 'output' directory exists (mkdir -p output).
+    wrdata ac.csv v(VOUT1)
+
+    * Optional on-screen Bode plot
+    plot db(v(VOUT1))
+.endc
+.end
