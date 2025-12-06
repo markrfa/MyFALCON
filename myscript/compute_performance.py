@@ -19,33 +19,43 @@ class TwoStageClass():
         :return
             result: dict(spec_kwds, spec_value)
         """
+        try: 
+            # use parse output here
+            freq, vout, ibias = self.parse_output(output_path)
+            gain = self.find_dc_gain(vout)
+            ugbw = self.find_ugbw(freq, vout)
+            phm = self.find_phm(freq, vout)
 
-        # use parse output here
-        freq, vout,  ibias = self.parse_output(output_path)
-        gain = self.find_dc_gain(vout)
-        ugbw = self.find_ugbw(freq, vout)
-        phm = self.find_phm(freq, vout)
 
+            spec = dict(
+                ugbw=ugbw,
+                gain=gain,
+                phm=phm,
+                ibias=ibias
+            )
 
-        spec = dict(
-            ugbw=ugbw,
-            gain=gain,
-            phm=phm,
-            ibias=ibias
-        )
+            return spec
+        except NotImplementedError:
+            return dict()
 
-        return spec
 
     def parse_output(self, output_path):
 
-        ac_fname = os.path.join(output_path, 'ac.csv')
-        dc_fname = os.path.join(output_path, 'dc.csv')
+        ac_fname = os.path.join(output_path, 'output', 'ac.csv')
+        dc_fname = os.path.join(output_path, 'output', 'dc.csv')
 
         if not os.path.isfile(ac_fname) or not os.path.isfile(dc_fname):
             print("ac/dc file doesn't exist: %s" % output_path)
 
         ac_raw_outputs = np.genfromtxt(ac_fname, skip_header=1)
         dc_raw_outputs = np.genfromtxt(dc_fname, skip_header=1)
+
+        # print(ac_raw_outputs)
+        # print(dc_raw_outputs)
+
+        if ac_raw_outputs.ndim == 1:
+            raise NotImplementedError("netlist simulation invalid")
+
         freq = ac_raw_outputs[:, 0]
         vout_real = ac_raw_outputs[:, 1]
         vout_imag = ac_raw_outputs[:, 2]

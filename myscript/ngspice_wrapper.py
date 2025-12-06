@@ -8,8 +8,9 @@ import subprocess
 import yaml
 import json
 import itertools
+import math
 from compute_performance import TwoStageClass
-import tqdm
+from tqdm import tqdm
 debug = False
 
 
@@ -27,8 +28,8 @@ class NgSpiceWrapper(object):
             self.yaml_data = yaml.load(f, Loader=yaml.FullLoader)
         self.fpath = self.yaml_data['dsn_netlist'][top_index]
         self.fpath = os.path.join(path, self.fpath)
-        print("topology index:", top_index)
-        print("self.fpath:", self.fpath)
+        # print("topology index:", top_index)
+        # print("self.fpath:", self.fpath)
         
         
         _, dsg_netlist_fname = os.path.split(self.fpath)  # filename w/ extension
@@ -71,9 +72,11 @@ class NgSpiceWrapper(object):
 
 
     def simulate(self, fpath):
+        # print("simulation started on file", fpath)
         info = 0 # this means no error occurred
         process = subprocess.run(
-            ['ngspice', '-b', fpath, '>/dev/null', '2>&1'], 
+            f"ngspice -b {fpath} >/dev/null 2>&1",
+            shell=True,
             capture_output=True, 
             text=True
         )
@@ -84,6 +87,7 @@ class NgSpiceWrapper(object):
         if (exit_code % 256):
             # raise RuntimeError('program {} failed!'.format(command))
             info = 1 # this means an error has occurred
+        # print(f"simulation complete, exit code: {info}")
         return info
 
 
@@ -105,11 +109,11 @@ class NgSpiceWrapper(object):
         self.create_design(state)
         topology = self.base_design_name
         info = self.simulate(self.fpath)
-        specs = self.translate_result(self.gen_dir)
+        specs = self.translate_result(self.gen_dir, info)
         return topology, state, specs, info
 
 
-    def translate_result(self, output_path):
+    def translate_result(self, output_path, info):
         """
         This method needs to be overwritten according to cicuit needs,
         parsing output, playing with the results to get a cost function, etc.
@@ -118,6 +122,8 @@ class NgSpiceWrapper(object):
         :param output_path:
         :return:
         """
+        if info != 0:
+            return []
         result = self.translator.translate_result(output_path)
         return result
 
@@ -125,7 +131,6 @@ class NgSpiceWrapper(object):
     # make states from cktparam.yaml
     # list of all possible combinations of parameters as specified in the yaml
     def make_states(self):
-        print("making states for", self.base_design_name)
         params = self.yaml_data["params"]
         param_ranges = params.values()
         param_names = list(params.keys())
@@ -140,21 +145,48 @@ class NgSpiceWrapper(object):
                 values.append(cur)
                 cur += step
             value_lists.append(values)
+        
+        return param_names, value_lists
 
         # itertools.product() return the Cartesian product (all possible combinations) of the input list
-        states = [dict(zip(param_names, combo)) for combo in itertools.product(*value_lists)]
-        print(self.base_design_name, "generation complete")
-
-        return states
+        # states = [dict(zip(param_names, combo)) for combo in itertools.product(*value_lists)]
     
 
-    def run(self, output_file, design_names=None, verbose=False):
+    # lazy evaluation to save memory
+    def all_states(self, param_names, value_lists):
+        for combo in itertools.product(*value_lists):
+            yield dict(zip(param_names, combo))
+    
+
+    def run(self, output_file, batch_size=10_000, verbose=False):
         """
-        :param states:
-        :param design_names: if None default design name will be used, otherwise the given design name will be used
+        :param batch_size:  Size of the buffer before it is flushed to the file
         :param verbose: If True it will print the design name that was created
         :return:
             results = [(state: dict(param_kwds, param_value), specs: dict(spec_kwds, spec_value), info: int)]
+        """
+        if not os.path.exists(output_file):
+            os.makedirs(os.path.dirname(output_file) or ".", exist_ok=True)
+            open(output_file, 'w').close()
+
+        param_names, value_lists = self.make_states()
+
+        total_iterations = math.prod(len(l) for l in value_lists)
+        
+        pbar = tqdm(total=total_iterations, desc="Generating simulations...", unit="file")
+        batch = []
+        for i, state in enumerate(self.all_states(param_names, value_lists)):
+            batch.append(self.create_design_and_simulate(state, self.base_design_name, verbose))
+            pbar.update(1)  # increment progress
+
+            # flush the batch every 10,000 entries
+            if i % batch_size == 0:
+                with open(output_file, 'w') as json_f:
+                    json.dump(batch, json_f)
+                    batch.clear()
+        pbar.close()
+
+
         """
         states = self.make_states()
         # pool = ThreadPool(processes=self.num_process)
@@ -175,3 +207,4 @@ class NgSpiceWrapper(object):
             json.dump(specs, json_f)
 
         return specs
+        """

@@ -14,3 +14,4 @@ plots/
 best_gnn_model_final.pt
 data_preprocessing.ipynb
 myscript/.falcon
+bsim4v5.out

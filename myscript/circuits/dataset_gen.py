@@ -42,10 +42,11 @@ def make_ds(yaml_path, num_workers):
             yaml_path = yaml_path,
             path = '/home/ubuntu/FALCON/myscript'
         )
-        output_file = os.path.join(base_design_name, base_design_name+".jsonl")
+        output_file = os.path.join("circuits", base_design_name, base_design_name+".jsonl")
         ngspice_sim.run(output_file)
         dataset_files.append(output_file)
 
+    print("individual json files successfully generated -- checkpoint 1")
     all_entries = []
     for file in dataset_files:
         if not os.path.exists(file):

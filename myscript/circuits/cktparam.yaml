@@ -1,23 +1,23 @@
 database_dir: "FALCON/myscript/circuits"
 dsn_netlist: [
-  "circuits/281/281_gen_netlist.cir", 
-  "circuits/628/628_gen_netlist.cir",
-  "circuits/921/921_gen_netlist.cir",
-  "circuits/978/978_gen_netlist.cir",
-  "circuits/1781/1781_gen_netlist.cir"
+  "circuits/281/281.cir", 
+  "circuits/628/628.cir",
+  "circuits/921/921.cir",
+  "circuits/978/978.cir",
+  "circuits/1781/1781.cir"
 ]
 num_process: 1
 
 # format: "component_name": [lower_bound, upper_bound, increment]
 params:
   R:  !!python/tuple [1000, 100000, 1000] # 1 kΩ - 100 kΩ
-  L:  !!python/tuple [!!float 1e-9, !!float 1e-6, !!float 1e-8] # 1 nH - 1 μH
-  C:  !!python/tuple [!!float 1e-13, !!float 5e-12, !!float 1e-13] # 100 fF - 5 pF
-  w:  !!python/tuple [!!float 1e-6, !!float 5e-5, !!float 1e-6] # 1 μm - 50 μm
-  ll:  !!python/tuple [!!float 3.6e-7, !!float 9e-7, !!float 5e-8] # 360 nm - 900nm
-  mn: !!python/tuple [1, 20, 1] # multiplier: 1 - 20
-  mp: !!python/tuple [1, 20, 1] # multiplier: 1 - 20
-  vth:   !!python/tuple [!!float 0.3, !!float 0.8, !!float 0.05]  # 	0.3 V	- 0.8 V
+  L:  !!python/tuple [!!float 1e-9, !!float 1e-6, !!float 1e-7] # 1 nH - 1 μH
+  C:  !!python/tuple [!!float 1e-13, !!float 5e-12, !!float 1e-12] # 100 fF - 5 pF
+  w:  !!python/tuple [!!float 1e-6, !!float 5e-5, !!float 1e-5] # 1 μm - 50 μm
+  ll:  !!python/tuple [!!float 3.6e-7, !!float 9e-7, !!float 5e-7] # 360 nm - 900nm
+  mn: !!python/tuple [1, 20, 4] # multiplier: 1 - 20
+  mp: !!python/tuple [1, 20, 4] # multiplier: 1 - 20
+  vth:   !!python/tuple [!!float 0.3, !!float 0.8, !!float 0.2]  # 	0.3 V	- 0.8 V
 
 # Every specification output will be normalized in the order of (gain, ibias, pm, ugbw)
 # TODO: fix the normalizaton values
