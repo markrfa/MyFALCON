@@ -185,26 +185,3 @@ class NgSpiceWrapper(object):
                     json.dump(batch, json_f)
                     batch.clear()
         pbar.close()
-
-
-        """
-        states = self.make_states()
-        # pool = ThreadPool(processes=self.num_process)
-        if design_names is None:
-            design_names = [self.base_design_name] * len(states)
-        arg_list = [(state, dsn_name, verbose) for (state, dsn_name)in zip(states, design_names)]
-        specs = []
-        total_iterations = len(arg_list)
-        pbar = tqdm(total=total_iterations, desc="Generating simulations...", unit="file")
-        for arg in arg_list:
-            specs.append(self.create_design_and_simulate(*arg))
-            pbar.update(1)  # increment progress
-        # specs = pool.starmap(self.create_design_and_simulate, arg_list)
-        # pool.close()
-        pbar.close()
-
-        with open(output_file, 'w') as json_f:
-            json.dump(specs, json_f)
-
-        return specs
-        """
